@@ -339,15 +339,46 @@ document.addEventListener('mouseup',e=>{
   if(isOverTrash(e.clientX,e.clientY))deleteMail(active);
   trash.classList.remove('hover');active.classList.remove('dragging');active=null;
 });
+// Touch con long press para drag — scroll normal sin drag
+let touchTimer=null, touchStartX=0, touchStartY=0;
+
 document.querySelectorAll('.mail').forEach(el=>{
   el.addEventListener('touchstart',e=>{
-    active=el;const r=el.getBoundingClientRect();ox=e.touches[0].clientX-r.left;oy=e.touches[0].clientY-r.top;
-    zTop++;el.style.zIndex=zTop;el.classList.add('dragging');
+    const t=e.touches[0];
+    touchStartX=t.clientX; touchStartY=t.clientY;
+    touchTimer=setTimeout(()=>{
+      active=el;
+      const r=el.getBoundingClientRect();
+      ox=touchStartX-r.left; oy=touchStartY-r.top;
+      zTop++; el.style.zIndex=zTop; el.classList.add('dragging');
+    }, 300);
+  },{passive:true});
+
+  el.addEventListener('touchmove',e=>{
+    // Si se movió mucho antes del long press, cancelar drag
+    if(!active && touchTimer){
+      const dx=Math.abs(e.touches[0].clientX-touchStartX);
+      const dy=Math.abs(e.touches[0].clientY-touchStartY);
+      if(dx>8||dy>8){ clearTimeout(touchTimer); touchTimer=null; }
+    }
+  },{passive:true});
+
+  el.addEventListener('touchend',()=>{
+    clearTimeout(touchTimer); touchTimer=null;
   },{passive:true});
 });
-document.addEventListener('touchmove',e=>{if(!active)return;e.preventDefault();active.style.left=(e.touches[0].clientX-ox)+'px';active.style.top=(e.touches[0].clientY-oy)+'px';},{passive:false});
+
+document.addEventListener('touchmove',e=>{
+  if(!active)return;
+  e.preventDefault();
+  active.style.left=(e.touches[0].clientX-ox)+'px';
+  active.style.top=(e.touches[0].clientY-oy)+'px';
+},{passive:false});
+
 document.addEventListener('touchend',e=>{
-  if(!active)return;const t=e.changedTouches[0];
+  clearTimeout(touchTimer); touchTimer=null;
+  if(!active)return;
+  const t=e.changedTouches[0];
   if(isOverTrash(t.clientX,t.clientY))deleteMail(active);
   trash.classList.remove('hover');active.classList.remove('dragging');active=null;
 });
